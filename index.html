@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* CSS Styles */
         body { font-family: 'Kanit', sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .container { width: 100%; max-width: 800px; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .lottery-section { margin-bottom: 30px; }
@@ -19,7 +18,7 @@
         .lottery-table th { font-weight: 700; font-size: 1.1em; }
         .date, .waiting, .number-highlight { color: #D32F2F; font-weight: 700; }
         .loader { text-align: center; font-weight: bold; color: #555; }
-        .updated { background-color: #e8f5e9; } /* สีเขียวอ่อนสำหรับแถวที่เพิ่งอัปเดต */
+        .updated { background-color: #e8f5e9; }
         .footer-notice { text-align: center; color: #888; font-size: 0.8em; margin-top: 20px; }
     </style>
 </head>
@@ -40,15 +39,8 @@
                 </thead>
                 <tbody id="hanoy-special">
                     <tr>
-                        <td class="date">09/06/25</td>
+                        <td class="date">...</td>
                         <td class="loader" colspan="4">กำลังโหลดผล...</td>
-                    </tr>
-                    <tr>
-                        <td>08/06/25</td>
-                        <td>1619</td>
-                        <td>619</td>
-                        <td>19</td>
-                        <td>27</td>
                     </tr>
                 </tbody>
             </table>
@@ -68,15 +60,8 @@
                 </thead>
                 <tbody id="hanoy-normal">
                      <tr>
-                        <td class="date">09/06/25</td>
+                        <td class="date">...</td>
                         <td class="loader" colspan="4">กำลังโหลดผล...</td>
-                    </tr>
-                    <tr>
-                        <td>08/06/25</td>
-                        <td>7490</td>
-                        <td>490</td>
-                        <td>90</td>
-                        <td>76</td>
                     </tr>
                 </tbody>
             </table>
@@ -96,37 +81,22 @@
                 </thead>
                 <tbody id="hanoy-vip">
                      <tr>
-                        <td class="date">09/06/25</td>
+                        <td class="date">...</td>
                         <td class="loader" colspan="4">กำลังโหลดผล...</td>
-                    </tr>
-                     <tr>
-                        <td>08/06/25</td>
-                        <td>0517</td>
-                        <td>517</td>
-                        <td>17</td>
-                        <td>14</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
-    <p class="footer-notice">ข้อมูลจะอัปเดตอัตโนมัติทุก 1 นาที | ข้อมูลจาก huaysong.net และอาจไม่ถูกต้องเสมอไป</p>
+    <p class="footer-notice">ข้อมูลจะอัปเดตอัตโนมัติทุก 1 นาที | ข้อมูลจาก huaysong.net</p>
 
     <script>
         const PROXY_URL = 'https://api.allorigins.win/raw?url=';
         const TARGET_URL = 'https://huaysong.net/huayhanoy/';
 
-        // ฟังก์ชันแสดงสถานะ "กำลังอัปเดต"
-        function showLoadingState() {
-            const tableIds = ['hanoy-special', 'hanoy-normal', 'hanoy-vip'];
-            tableIds.forEach(id => {
-                const firstRow = document.querySelector(`#${id} tr:first-child`);
-                if (firstRow) {
-                    const dateCell = firstRow.querySelector('.date');
-                    const dateText = dateCell ? dateCell.innerText : '...';
-                    firstRow.innerHTML = `<td class="date">${dateText}</td><td class="loader" colspan="4">กำลังอัปเดต...</td>`;
-                }
-            });
+        function showLoadingState(tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            tbody.innerHTML = `<tr><td class="date">...</td><td class="loader" colspan="4">กำลังอัปเดต...</td></tr>`;
         }
 
         async function fetchLotteryResults() {
@@ -137,57 +107,72 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
 
-                const getResults = (tableIndex, targetTbodyId) => {
+                // --- LOGIC ที่ปรับปรุงใหม่ ---
+                const getResults = (headingText, targetTbodyId) => {
                     const targetTbody = document.getElementById(targetTbodyId);
-                    const table = doc.querySelectorAll('.table-bordered')[tableIndex];
-                    if (!table) {
-                        targetTbody.querySelector('.loader').textContent = 'ไม่พบตารางผล';
-                        return;
-                    }
-                    
-                    const latestRow = table.querySelector('tbody > tr:first-child');
-                    if (latestRow) {
-                        const cells = latestRow.querySelectorAll('td');
-                        let resultsHTML = `
-                            <td class="date">${cells[0] ? cells[0].innerText.trim() : 'N/A'}</td>
-                            <td>${cells[1] ? cells[1].innerText.trim() : 'N/A'}</td>
-                            <td>${cells[2] ? cells[2].innerText.trim() : 'N/A'}</td>
-                            <td>${cells[3] ? cells[3].innerText.trim() : 'N/A'}</td>
-                            <td class="number-highlight">${cells[4] ? cells[4].innerText.trim() : 'N/A'}</td>`;
-                        
-                        const targetRow = targetTbody.querySelector('tr:first-child');
-                        targetRow.innerHTML = resultsHTML;
+                    const allHeadings = doc.querySelectorAll('h2, h3'); // ค้นหาทั้ง h2 และ h3 เพื่อความแน่นอน
+                    let foundTable = null;
 
-                        // เพิ่มเอฟเฟกต์สีจางๆ เพื่อให้รู้ว่ามีการอัปเดต
-                        targetRow.classList.add('updated');
-                        setTimeout(() => targetRow.classList.remove('updated'), 2000);
+                    for (const h of allHeadings) {
+                        if (h.textContent.includes(headingText)) {
+                            // หา element ที่เป็นตารางที่อยู่ถัดไป
+                            let sibling = h.nextElementSibling;
+                            while(sibling) {
+                                if (sibling.tagName === 'TABLE') {
+                                    foundTable = sibling;
+                                    break;
+                                }
+                                // บางทีตารางอาจจะซ้อนอยู่ใน div อีกชั้น
+                                if (sibling.querySelector('table')) {
+                                     foundTable = sibling.querySelector('table');
+                                     break;
+                                }
+                                sibling = sibling.nextElementSibling;
+                            }
+                            if(foundTable) break;
+                        }
+                    }
+
+                    if (foundTable) {
+                        // ใช้ innerHTML ของ tbody จากเว็บต้นทางมาแสดงผลโดยตรง
+                        targetTbody.innerHTML = foundTable.querySelector('tbody').innerHTML;
+                        
+                        // ใส่ highlight ให้ตัวเลข 2 ตัวล่าง (ถ้ามี)
+                        const lastCell = targetTbody.querySelector('tr:first-child td:last-child');
+                        if(lastCell) lastCell.classList.add('number-highlight');
+                        
+                        // ใส่เอฟเฟกต์อัปเดต
+                        const firstRow = targetTbody.querySelector('tr:first-child');
+                        if(firstRow) {
+                             firstRow.classList.add('updated');
+                             setTimeout(() => firstRow.classList.remove('updated'), 2000);
+                        }
 
                     } else {
-                         targetTbody.querySelector('.loader').textContent = 'ไม่พบข้อมูลล่าสุด';
+                        targetTbody.innerHTML = `<tr><td colspan="5" class="loader">ไม่พบตารางผล (${headingText})</td></tr>`;
                     }
                 };
-
-                getResults(0, 'hanoy-special');
-                getResults(1, 'hanoy-normal');
-                getResults(2, 'hanoy-vip');
+                
+                // ใช้ Keyword ที่เฉพาะเจาะจงในการค้นหา
+                getResults('พิเศษ', 'hanoy-special');
+                getResults('ปกติ', 'hanoy-normal');
+                getResults('VIP', 'hanoy-vip');
 
             } catch (error) {
                 console.error('Error fetching lottery data:', error);
                 document.querySelectorAll('.loader').forEach(el => {
-                    el.textContent = 'โหลดข้อมูลล้มเหลว';
+                    el.parentElement.innerHTML = `<td colspan="5" class="loader">โหลดข้อมูลล้มเหลว</td>`;
                 });
             }
         }
 
-        // --- ส่วนที่เพิ่มเข้ามา ---
-        // 1. สั่งให้ทำงานครั้งแรกทันทีเมื่อเปิดหน้าเว็บ
         document.addEventListener('DOMContentLoaded', () => {
             fetchLotteryResults();
-
-            // 2. สั่งให้ทำงานซ้ำทุก 1 นาที (60,000 มิลลิวินาที)
             setInterval(() => {
                 console.log('Refreshing data...');
-                showLoadingState(); // แสดงสถานะ "กำลังอัปเดต..." ก่อนดึงข้อมูลใหม่
+                showLoadingState('hanoy-special');
+                showLoadingState('hanoy-normal');
+                showLoadingState('hanoy-vip');
                 fetchLotteryResults();
             }, 60000);
         });
