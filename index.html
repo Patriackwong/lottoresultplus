@@ -91,7 +91,7 @@
     <p class="footer-notice">ข้อมูลจะอัปเดตอัตโนมัติทุก 1 นาที | ข้อมูลจาก huaysong.net</p>
 
     <script>
-        const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
         const TARGET_URL = 'https://huaysong.net/huayhanoy/';
 
         function showLoadingState(tbodyId) {
@@ -107,8 +107,7 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
 
-                // ตรวจสอบว่าได้ข้อมูล HTML หรือไม่
-                console.log(doc); // ใช้เพื่อตรวจสอบ HTML ที่ได้รับจากเว็บไซต์
+                console.log(doc);  // ตรวจสอบ HTML ที่ได้
 
                 // --- Logic เพื่อดึงข้อมูล ---
                 const getResults = (headingText, targetTbodyId) => {
@@ -119,46 +118,38 @@
                     for (const h of allHeadings) {
                         if (h.textContent.includes(headingText)) {
                             let sibling = h.nextElementSibling;
-                            while(sibling) {
+                            while (sibling) {
                                 if (sibling.tagName === 'TABLE') {
                                     foundTable = sibling;
                                     break;
                                 }
                                 if (sibling.querySelector('table')) {
-                                     foundTable = sibling.querySelector('table');
-                                     break;
+                                    foundTable = sibling.querySelector('table');
+                                    break;
                                 }
                                 sibling = sibling.nextElementSibling;
                             }
-                            if(foundTable) break;
+                            if (foundTable) break;
                         }
                     }
 
                     if (foundTable) {
-                        // ใช้ innerHTML ของ tbody จากเว็บต้นทางมาแสดงผลโดยตรง
                         targetTbody.innerHTML = foundTable.querySelector('tbody').innerHTML;
-                        
-                        // ใส่ highlight ให้ตัวเลข 2 ตัวล่าง (ถ้ามี)
                         const lastCell = targetTbody.querySelector('tr:first-child td:last-child');
-                        if(lastCell) lastCell.classList.add('number-highlight');
-                        
-                        // ใส่เอฟเฟกต์อัปเดต
+                        if (lastCell) lastCell.classList.add('number-highlight');
                         const firstRow = targetTbody.querySelector('tr:first-child');
-                        if(firstRow) {
-                             firstRow.classList.add('updated');
-                             setTimeout(() => firstRow.classList.remove('updated'), 2000);
+                        if (firstRow) {
+                            firstRow.classList.add('updated');
+                            setTimeout(() => firstRow.classList.remove('updated'), 2000);
                         }
-
                     } else {
                         targetTbody.innerHTML = `<tr><td colspan="5" class="loader">ไม่พบตารางผล (${headingText})</td></tr>`;
                     }
                 };
 
-                // ใช้ Keyword ที่เฉพาะเจาะจงในการค้นหา
                 getResults('พิเศษ', 'hanoy-special');
                 getResults('ปกติ', 'hanoy-normal');
                 getResults('VIP', 'hanoy-vip');
-
             } catch (error) {
                 console.error('Error fetching lottery data:', error);
                 document.querySelectorAll('.loader').forEach(el => {
