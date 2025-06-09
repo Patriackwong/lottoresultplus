@@ -107,7 +107,10 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
 
-                // --- LOGIC ที่ปรับปรุงใหม่ ---
+                // ตรวจสอบว่าได้ข้อมูล HTML หรือไม่
+                console.log(doc); // ใช้เพื่อตรวจสอบ HTML ที่ได้รับจากเว็บไซต์
+
+                // --- Logic เพื่อดึงข้อมูล ---
                 const getResults = (headingText, targetTbodyId) => {
                     const targetTbody = document.getElementById(targetTbodyId);
                     const allHeadings = doc.querySelectorAll('h2, h3'); // ค้นหาทั้ง h2 และ h3 เพื่อความแน่นอน
@@ -115,14 +118,12 @@
 
                     for (const h of allHeadings) {
                         if (h.textContent.includes(headingText)) {
-                            // หา element ที่เป็นตารางที่อยู่ถัดไป
                             let sibling = h.nextElementSibling;
                             while(sibling) {
                                 if (sibling.tagName === 'TABLE') {
                                     foundTable = sibling;
                                     break;
                                 }
-                                // บางทีตารางอาจจะซ้อนอยู่ใน div อีกชั้น
                                 if (sibling.querySelector('table')) {
                                      foundTable = sibling.querySelector('table');
                                      break;
@@ -152,7 +153,7 @@
                         targetTbody.innerHTML = `<tr><td colspan="5" class="loader">ไม่พบตารางผล (${headingText})</td></tr>`;
                     }
                 };
-                
+
                 // ใช้ Keyword ที่เฉพาะเจาะจงในการค้นหา
                 getResults('พิเศษ', 'hanoy-special');
                 getResults('ปกติ', 'hanoy-normal');
