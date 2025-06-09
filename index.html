@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ผลหวยฮานอย (ดึงข้อมูลสด)</title>
+    <title>ผลหวยฮานอย (อัปเดตทุก 1 นาที)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
@@ -14,11 +14,12 @@
         .lottery-section { margin-bottom: 30px; }
         h2 { text-align: center; color: #333; font-weight: 700; margin-bottom: 15px; font-size: 1.8em; }
         .lottery-table { width: 100%; border-collapse: collapse; text-align: center; }
-        .lottery-table th, .lottery-table td { padding: 12px 15px; border: 1px solid #dddddd; }
+        .lottery-table th, .lottery-table td { padding: 12px 15px; border: 1px solid #dddddd; transition: background-color 0.5s ease; }
         .lottery-table thead tr { background-color: #4CAF50; color: white; }
         .lottery-table th { font-weight: 700; font-size: 1.1em; }
         .date, .waiting, .number-highlight { color: #D32F2F; font-weight: 700; }
         .loader { text-align: center; font-weight: bold; color: #555; }
+        .updated { background-color: #e8f5e9; } /* สีเขียวอ่อนสำหรับแถวที่เพิ่งอัปเดต */
         .footer-notice { text-align: center; color: #888; font-size: 0.8em; margin-top: 20px; }
     </style>
 </head>
@@ -109,34 +110,41 @@
             </table>
         </div>
     </div>
-    <p class="footer-notice">ข้อมูลดึงมาจาก huaysong.net และอาจไม่ถูกต้องเสมอไป โปรดตรวจสอบจากแหล่งข้อมูลอีกครั้ง</p>
+    <p class="footer-notice">ข้อมูลจะอัปเดตอัตโนมัติทุก 1 นาที | ข้อมูลจาก huaysong.net และอาจไม่ถูกต้องเสมอไป</p>
 
     <script>
-        // ใช้ Proxy เพื่อหลีกเลี่ยงปัญหา CORS
         const PROXY_URL = 'https://api.allorigins.win/raw?url=';
         const TARGET_URL = 'https://huaysong.net/huayhanoy/';
+
+        // ฟังก์ชันแสดงสถานะ "กำลังอัปเดต"
+        function showLoadingState() {
+            const tableIds = ['hanoy-special', 'hanoy-normal', 'hanoy-vip'];
+            tableIds.forEach(id => {
+                const firstRow = document.querySelector(`#${id} tr:first-child`);
+                if (firstRow) {
+                    const dateCell = firstRow.querySelector('.date');
+                    const dateText = dateCell ? dateCell.innerText : '...';
+                    firstRow.innerHTML = `<td class="date">${dateText}</td><td class="loader" colspan="4">กำลังอัปเดต...</td>`;
+                }
+            });
+        }
 
         async function fetchLotteryResults() {
             try {
                 const response = await fetch(PROXY_URL + TARGET_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const text = await response.text();
-
-                // สร้างเอกสารจำลองเพื่อค้นหาข้อมูล
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
 
-                // ฟังก์ชันสำหรับดึงข้อมูลจากตาราง
-                const getResults = (tableIndex, targetTbody) => {
+                const getResults = (tableIndex, targetTbodyId) => {
+                    const targetTbody = document.getElementById(targetTbodyId);
                     const table = doc.querySelectorAll('.table-bordered')[tableIndex];
                     if (!table) {
                         targetTbody.querySelector('.loader').textContent = 'ไม่พบตารางผล';
                         return;
                     }
                     
-                    // เอารางแรก (ล่าสุด)
                     const latestRow = table.querySelector('tbody > tr:first-child');
                     if (latestRow) {
                         const cells = latestRow.querySelectorAll('td');
@@ -150,27 +158,39 @@
                         const targetRow = targetTbody.querySelector('tr:first-child');
                         targetRow.innerHTML = resultsHTML;
 
+                        // เพิ่มเอฟเฟกต์สีจางๆ เพื่อให้รู้ว่ามีการอัปเดต
+                        targetRow.classList.add('updated');
+                        setTimeout(() => targetRow.classList.remove('updated'), 2000);
+
                     } else {
                          targetTbody.querySelector('.loader').textContent = 'ไม่พบข้อมูลล่าสุด';
                     }
                 };
 
-                // ดึงข้อมูลแต่ละตาราง
-                getResults(0, document.getElementById('hanoy-special')); // ตารางแรก: ฮานอยพิเศษ
-                getResults(1, document.getElementById('hanoy-normal'));  // ตารางที่สอง: ฮานอยปกติ
-                getResults(2, document.getElementById('hanoy-vip'));     // ตารางที่สาม: ฮานอย VIP
+                getResults(0, 'hanoy-special');
+                getResults(1, 'hanoy-normal');
+                getResults(2, 'hanoy-vip');
 
             } catch (error) {
                 console.error('Error fetching lottery data:', error);
-                // แสดงข้อความผิดพลาดในทุกตาราง
                 document.querySelectorAll('.loader').forEach(el => {
                     el.textContent = 'โหลดข้อมูลล้มเหลว';
                 });
             }
         }
 
-        // เริ่มดึงข้อมูลเมื่อหน้าเว็บโหลดเสร็จ
-        document.addEventListener('DOMContentLoaded', fetchLotteryResults);
+        // --- ส่วนที่เพิ่มเข้ามา ---
+        // 1. สั่งให้ทำงานครั้งแรกทันทีเมื่อเปิดหน้าเว็บ
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLotteryResults();
+
+            // 2. สั่งให้ทำงานซ้ำทุก 1 นาที (60,000 มิลลิวินาที)
+            setInterval(() => {
+                console.log('Refreshing data...');
+                showLoadingState(); // แสดงสถานะ "กำลังอัปเดต..." ก่อนดึงข้อมูลใหม่
+                fetchLotteryResults();
+            }, 60000);
+        });
     </script>
 </body>
 </html>
